@@ -28,7 +28,11 @@ namespace Save.The.World.RestClient
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services
+                .AddMvc()
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
+                .AddJsonOptions(options => options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
+
             var connectionString = @"Server=localhost\SQLEXPRESS;Database=SaveTheWorld;Trusted_Connection=True;";
             services.AddDbContext<WorldContext>(options => options.UseSqlServer(connectionString));
         }
@@ -36,7 +40,6 @@ namespace Save.The.World.RestClient
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
-
             app.UseHsts();
             app.UseHttpsRedirection();
             app.UseMvc();

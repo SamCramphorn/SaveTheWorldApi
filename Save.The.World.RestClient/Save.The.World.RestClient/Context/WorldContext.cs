@@ -13,9 +13,9 @@ namespace Save.The.World.RestClient.Context
         {
             
         }
-        public DbSet<Driver> Driver { get; set; }
+        public DbSet<User> User { get; set; }
         public DbSet<Point> Point { get; set; }
-        public DbSet<CollectivePoints> CollectivePoints { get; set; }
+        public DbSet<TotalPoints> TotalPoints { get; set; }
     
     }
 }
