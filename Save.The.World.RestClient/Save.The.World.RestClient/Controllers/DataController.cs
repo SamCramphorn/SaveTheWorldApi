@@ -90,8 +90,14 @@ namespace Save.The.World.RestClient.Controllers
                 Console.WriteLine("Name, Major");
                 foreach (var row in values)
                 {
-                    if (CreateUserModel(row[0], row[3]))
-                        Console.WriteLine("{0}, {1}", row[0], row[3]);
+                    try
+                    {
+                        CreateUserModel(row[0], row[3]);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.InnerException);
+                    }
                 }
             }
             else

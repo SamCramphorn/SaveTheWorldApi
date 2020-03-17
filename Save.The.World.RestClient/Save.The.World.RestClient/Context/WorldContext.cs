@@ -11,7 +11,7 @@ namespace Save.The.World.RestClient.Context
 
         public WorldContext(DbContextOptions<WorldContext> options) : base(options)
         {
-            
+            User.Include(x => x.Points);
         }
         public DbSet<User> User { get; set; }
         public DbSet<Point> Point { get; set; }
