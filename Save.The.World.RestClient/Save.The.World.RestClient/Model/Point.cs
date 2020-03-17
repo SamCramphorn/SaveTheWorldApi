@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -11,11 +12,13 @@ namespace Save.The.World.RestClient.Model
     {
         [Key]
         [Column("PointId")]
-        [DatabaseGeneratedAttribute(DatabaseGeneratedOption.Identity)]
-        public int PointId { get; set; }
+        [JsonIgnore]
+        public Guid PointId { get; set; }
         [Column("Longitude")]
         public double Longitude { get; set; }
         [Column("Latitude")]
         public double Latitude { get; set; }
+
+        public virtual Model.User User { get; set; }
     }
 }

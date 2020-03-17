@@ -7,6 +7,15 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Save.The.World.RestClient.Context;
 using Save.The.World.RestClient.Model;
+using Google.Apis.Auth.OAuth2;
+using System.Threading.Tasks;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Services;
+using Google.Apis.Sheets.v4;
+using Google.Apis.Sheets.v4.Data;
+using Google.Apis.Util.Store;
+using System.IO;
+using System.Threading;
 
 namespace Save.The.World.RestClient.Controllers
 {
@@ -29,25 +38,6 @@ namespace Save.The.World.RestClient.Controllers
             try
             {
                 PopulateData();
-
-                //var users = new List<UserPoints>();
-
-                //foreach (var data in _worldContext.TotalPoints)
-                //{
-                //    if (users.Any(x => x.User.UserId == data.User.UserId))
-                //        users.Find(x => x.User.UserId == data.User.UserId).Points.Add(data.Point);
-                //    else
-                //    {
-                //        var points = data.
-                //        var newUser = new UserPoints()
-                //        {
-                //            User = data.User,
-                //            Points = new List<Point>{
-                //                data.User.TotalPoints.Select(x => x.Point).ToList();
-                //        }
-                //        }
-                //}
-
                 return Ok(_worldContext.User.ToList());
             }
             catch (Exception ex)
@@ -59,53 +49,99 @@ namespace Save.The.World.RestClient.Controllers
 
         private void PopulateData()
         {
+            string[] Scopes = { SheetsService.Scope.SpreadsheetsReadonly };
+            string ApplicationName = "Google Sheets API .NET Quickstart";
+
+            UserCredential credential;
+
+            using (var stream =
+                new FileStream("credentials.json", FileMode.Open, FileAccess.Read))
+            {
+                // The file token.json stores the user's access and refresh tokens, and is created
+                // automatically when the authorization flow completes for the first time.
+                string credPath = "token.json";
+                credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+                    GoogleClientSecrets.Load(stream).Secrets,
+                    Scopes,
+                    "user",
+                    CancellationToken.None,
+                    new FileDataStore(credPath, true)).Result;
+                Console.WriteLine("Credential file saved to: " + credPath);
+            }
+
+            // Create Google Sheets API service.
+            var service = new SheetsService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = ApplicationName,
+            });
+
+            // Define request parameters.
+            String spreadsheetId = "1c-Ub4EgyOyxlmMoaweKub-1lbnOlSecX-caX7LUeHGo";
+            String range = "Sheet1!A2:E";
+            SpreadsheetsResource.ValuesResource.GetRequest request = service.Spreadsheets.Values.Get(spreadsheetId, range);
+
+            // Prints the names and majors of students in a sample spreadsheet:
+            // https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+            ValueRange response = request.Execute();
+            IList<IList<Object>> values = response.Values;
+            if (values != null && values.Count > 0)
+            {
+                Console.WriteLine("Name, Major");
+                foreach (var row in values)
+                {
+                    if (CreateUserModel(row[0], row[3]))
+                        Console.WriteLine("{0}, {1}", row[0], row[3]);
+                }
+            }
+            else
+                Console.WriteLine("No data found.");
+        }
+
+        private bool CreateUserModel(object userId, object coordinateContents)
+        {
             using (var transaction = _worldContext.Database.BeginTransaction())
             {
-                var user = new Model.User()
+                if (int.TryParse(userId.ToString(), out var id) && !_worldContext.User.Any(x => x.UserId == id))
                 {
-                    Name = "Sam",
-                    Address = "1 Abington Grove",
-                    NeedsHelp = false,
-                    Number = "01604412345",
-                };
-
-                var points = new List<Model.Point>()
-            {
-                new Model.Point(){Latitude =52.250624,Longitude =-0.879991},
-                new Model.Point(){Latitude =52.257395,Longitude =-0.872117},
-                new Model.Point(){Latitude =52.256029,Longitude =-0.870743},
-                new Model.Point(){Latitude =52.255162,Longitude =-0.862976},
-                new Model.Point(){Latitude =52.252444,Longitude =-0.861335},
-                new Model.Point(){Latitude =52.250637,Longitude =-0.857   },
-                new Model.Point(){Latitude =52.246394,Longitude =-0.85597 },
-                new Model.Point(){Latitude =52.245632,Longitude =-0.84404 },
-                new Model.Point(){Latitude =52.242742,Longitude =-0.845757},
-                new Model.Point(){Latitude =52.240193,Longitude =-0.86127 },
-                new Model.Point(){Latitude =52.245149,Longitude =-0.864551},
-                new Model.Point(){Latitude =52.248562,Longitude =-0.868371},
-                new Model.Point(){Latitude =52.245619,Longitude =-0.87028 },
-                new Model.Point(){Latitude =52.243506,Longitude =-0.872638},
-                new Model.Point(){Latitude =52.241667,Longitude =-0.879247},
-                new Model.Point(){Latitude =52.245398,Longitude =-0.883023}
-            };
-
-                _worldContext.User.Add(user);
-                points.ForEach(x => _worldContext.Point.Add(x));
-
-                var totalPoints = new List<Model.TotalPoints>();
-
-                foreach (var point in points)
-                {
-                    totalPoints.Add(new Model.TotalPoints()
+                    var user = new User()
                     {
-                        Point = point,
-                        User = user,
-                    });
+                        UserId = id,
+                        Points = new List<Point>()
+                    };
+
+                    var contents = coordinateContents.ToString();
+                    if (string.IsNullOrEmpty(contents) || contents.Equals("null", StringComparison.InvariantCultureIgnoreCase))
+                        return false;
+
+
+                    var content = contents.Split("\n", StringSplitOptions.RemoveEmptyEntries);
+                    var points = new List<Point>();
+
+                    foreach (var coordinates in content)
+                    {
+                        var coordinate = coordinates.Split(',');
+                        if (coordinate.Count() == 2)
+                        {
+                            points.Add(new Point()
+                            {
+                                PointId = Guid.NewGuid(),
+                                Latitude = double.Parse(coordinate[0]),
+                                Longitude = double.Parse(coordinate[1]),
+                                User = user
+                            });
+                        }
+                        if (points.Any())
+                        {
+                            _worldContext.User.Add(user);
+                            points.ForEach(x => _worldContext.Point.Add(x));
+                        }
+                    }
                 }
-                totalPoints.ForEach(x => _worldContext.TotalPoints.Add(x));
 
                 _worldContext.SaveChanges();
                 transaction.Commit();
+                return true;
             }
         }
     }

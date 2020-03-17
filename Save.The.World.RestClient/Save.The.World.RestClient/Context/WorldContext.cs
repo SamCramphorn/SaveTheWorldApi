@@ -15,7 +15,6 @@ namespace Save.The.World.RestClient.Context
         }
         public DbSet<User> User { get; set; }
         public DbSet<Point> Point { get; set; }
-        public DbSet<TotalPoints> TotalPoints { get; set; }
     
     }
 }
