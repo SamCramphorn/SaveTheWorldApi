@@ -13,7 +13,6 @@ namespace Save.The.World.RestClient.Model
         [Key]
         [Column("UserId")]
         public int UserId { get; set; }
-        public IList<Point> Points{ get; set; }
-
+        public virtual IList<Point> Points{ get; set; }
     }
 }

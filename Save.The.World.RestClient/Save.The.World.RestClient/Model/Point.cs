@@ -19,6 +19,9 @@ namespace Save.The.World.RestClient.Model
         [Column("Latitude")]
         public double Latitude { get; set; }
 
+        [JsonIgnore]
+        public int UserId { get; set; }
+        [JsonIgnore]
         public virtual Model.User User { get; set; }
     }
 }
